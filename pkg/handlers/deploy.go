@@ -117,8 +117,66 @@ func MakeDeployHandler(functionNamespace string, factory k8s.FunctionFactory) ht
 
 		log.Printf("Service created: %s.%s\n", request.Service, namespace)
 
+		persistenceVolume := factory.Client.CoreV1().PersistentVolumes()
+		persistenceVolumeSpec, _ := makePersistentVolume()
+		_,err = persistenceVolume.Create(context.TODO(),persistenceVolumeSpec,metav1.CreateOptions{})
+
+		if err != nil {
+			wrappedErr := fmt.Errorf("failed create PersistentVolume: %s", err.Error())
+			log.Println(wrappedErr)
+			http.Error(w, wrappedErr.Error(), http.StatusBadRequest)
+			return
+		}
+
+		persistenceVolumeClaim := factory.Client.CoreV1().PersistentVolumeClaims(namespace)
+		persistenceVolumeClaimSpec, _ := makePersistentVolumeClaim()
+		_,err = persistenceVolumeClaim.Create(context.TODO(),persistenceVolumeClaimSpec,metav1.CreateOptions{})
+
+		if err != nil {
+			wrappedErr := fmt.Errorf("failed create PersistentVolumeClaims: %s", err.Error())
+			log.Println(wrappedErr)
+			http.Error(w, wrappedErr.Error(), http.StatusBadRequest)
+			return
+		}
+
 		w.WriteHeader(http.StatusAccepted)
 	}
+}
+func makePersistentVolume() (*corev1.PersistentVolume, error) {
+	PersistenceVolume := &corev1.PersistentVolume{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "openfaas-local-storage-pv",
+		},
+		Spec: corev1.PersistentVolumeSpec{
+			Capacity: corev1.ResourceList{
+				corev1.ResourceName(corev1.ResourceStorage): resource.MustParse("10Gi"),
+			},
+			AccessModes: []corev1.PersistentVolumeAccessMode{corev1.ReadWriteMany},
+			PersistentVolumeSource: corev1.PersistentVolumeSource{
+				HostPath: &corev1.HostPathVolumeSource{
+					Path: "/openfaas-local-storage",
+				},
+			},
+		},
+	}
+	return PersistenceVolume, nil
+
+}
+func makePersistentVolumeClaim() (*corev1.PersistentVolumeClaim, error) {
+	PersistentVolumeClaim := &corev1.PersistentVolumeClaim{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "openfaas-local-storage-pvc",
+		},
+		Spec: corev1.PersistentVolumeClaimSpec{
+			AccessModes: []corev1.PersistentVolumeAccessMode{corev1.ReadWriteMany},
+			Resources: corev1.ResourceRequirements{
+				Requests: corev1.ResourceList{
+					corev1.ResourceName(corev1.ResourceStorage): resource.MustParse("10Gi"),
+				},
+			},
+		},
+	}
+	return PersistentVolumeClaim, nil
 }
 
 func makeDeploymentSpec(request types.FunctionDeployment, existingSecrets map[string]*apiv1.Secret, factory k8s.FunctionFactory) (*appsv1.Deployment, error) {
@@ -211,8 +269,24 @@ func makeDeploymentSpec(request types.FunctionDeployment, existingSecrets map[st
 				},
 				Spec: apiv1.PodSpec{
 					NodeSelector: nodeSelector,
-					Containers: []apiv1.Container{
+					SchedulerName: "skippy-scheduler",
+					Volumes: []corev1.Volume{
 						{
+							Name: "openfaas-local-storage",
+							VolumeSource : corev1.VolumeSource{
+								PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
+									ClaimName:"openfaas-local-storage-pvc",
+								},
+							},
+						},
+					},
+					Containers: []apiv1.Container{
+						{	VolumeMounts: []corev1.VolumeMount{
+								{
+									Name: "openfaas-local-storage",
+									MountPath:"/openfaas-local-storage",
+								},
+							},
 							Name:  request.Service,
 							Image: request.Image,
 							Ports: []apiv1.ContainerPort{
@@ -309,6 +383,15 @@ func buildEnvVars(request *types.FunctionDeployment) []corev1.EnvVar {
 			Value: request.EnvProcess,
 		})
 	}
+
+	envVars = append(envVars, corev1.EnvVar{
+		Name:  "node",
+		ValueFrom: &corev1.EnvVarSource{
+			FieldRef: &corev1.ObjectFieldSelector{
+				FieldPath: "spec.nodeName",
+			},
+		},
+	})
 
 	for k, v := range request.EnvVars {
 		envVars = append(envVars, corev1.EnvVar{
