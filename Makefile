@@ -1,5 +1,5 @@
 .PHONY: build local push namespaces install charts start-kind stop-kind build-buildx
-TAG?=latest
+TAG?=0.1
 export DOCKER_CLI_EXPERIMENTAL=enabled
 
 all: build-docker
@@ -9,7 +9,7 @@ local:
 
 build-docker:
 	docker build \
-	-t ghcr.io/openfaas/faas-netes:$(TAG) .
+	-t keniack/skippy-faas-netes:$(TAG) .
 
 .PHONY: build-buildx
 build-buildx:
@@ -17,7 +17,7 @@ build-buildx:
 	docker buildx build \
 		--output "type=docker,push=false" \
 		--platform linux/amd64 \
-		--tag ghcr.io/openfaas/faas-netes:$(TAG) \
+		--tag keniack/skippy-faas-netes:$(TAG) \
 		.
 
 .PHONY: build-buildx-all
@@ -26,11 +26,11 @@ build-buildx-all:
 	docker buildx build \
 		--platform linux/amd64,linux/arm/v7,linux/arm64 \
 		--output "type=image,push=false" \
-		--tag ghcr.io/openfaas/faas-netes:$(TAG) \
+		--tag keniack/skippy-faas-netes:$(TAG) \
 		.
 
 push:
-	docker push ghcr.io/openfaas/faas-netes:$(TAG)
+	docker push keniack/skippy-faas-netes:$(TAG)
 
 namespaces:
 	kubectl apply -f namespaces.yml
