@@ -1,5 +1,5 @@
 .PHONY: build local push namespaces install charts start-kind stop-kind build-buildx
-TAG?=0.1
+TAG?=0.12
 export DOCKER_CLI_EXPERIMENTAL=enabled
 
 all: build-docker

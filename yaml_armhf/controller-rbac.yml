@@ -21,6 +21,8 @@ rules:
       - ""
     resources:
       - services
+      - persistentvolumes
+      - persistentvolumeclaims
     verbs:
       - get
       - list
