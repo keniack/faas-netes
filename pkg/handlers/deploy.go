@@ -117,7 +117,7 @@ func MakeDeployHandler(functionNamespace string, factory k8s.FunctionFactory) ht
 
 		log.Printf("Service created: %s.%s\n", request.Service, namespace)
 
-		persistenceVolume := factory.Client.CoreV1().PersistentVolumes()
+		/*persistenceVolume := factory.Client.CoreV1().PersistentVolumes()
 		persistenceVolumeSpec, _ := makePersistentVolume(request)
 		_,err = persistenceVolume.Create(context.TODO(),persistenceVolumeSpec,metav1.CreateOptions{})
 
@@ -127,7 +127,7 @@ func MakeDeployHandler(functionNamespace string, factory k8s.FunctionFactory) ht
 			http.Error(w, wrappedErr.Error(), http.StatusBadRequest)
 			return
 		}
-
+		*/
 		persistenceVolumeClaim := factory.Client.CoreV1().PersistentVolumeClaims(namespace)
 		persistenceVolumeClaimSpec, _ := makePersistentVolumeClaim(request)
 		_,err = persistenceVolumeClaim.Create(context.TODO(),persistenceVolumeClaimSpec,metav1.CreateOptions{})
@@ -179,7 +179,7 @@ func makePersistentVolumeClaim(request types.FunctionDeployment) (*corev1.Persis
 			},
 			Selector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{
-					"storage-pv": request.Service,
+					"openfaas.storage": "local",
 				},
 			},
 		},

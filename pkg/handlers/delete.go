@@ -124,19 +124,6 @@ func deleteFunction(functionNamespace string, clientset *kubernetes.Clientset, r
 		w.Write([]byte(svcErr.Error()))
 		return fmt.Errorf("error deleting function's service")
 	}
-	if pvErr := clientset.CoreV1().
-		PersistentVolumes().
-		Delete(context.TODO(), request.FunctionName+"-pv", *opts); pvErr != nil {
-
-		if errors.IsNotFound(pvErr) {
-			w.WriteHeader(http.StatusNotFound)
-		} else {
-			w.WriteHeader(http.StatusInternalServerError)
-		}
-
-		w.Write([]byte(pvErr.Error()))
-		return fmt.Errorf("error deleting function's persistenceVolume")
-	}
 	if pvcErr := clientset.CoreV1().
 		PersistentVolumeClaims(functionNamespace).
 		Delete(context.TODO(), request.FunctionName+"-pvc", *opts); pvcErr != nil {
