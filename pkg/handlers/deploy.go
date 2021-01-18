@@ -117,8 +117,8 @@ func MakeDeployHandler(functionNamespace string, factory k8s.FunctionFactory) ht
 
 		log.Printf("Service created: %s.%s\n", request.Service, namespace)
 
-		/*persistenceVolume := factory.Client.CoreV1().PersistentVolumes()
-		persistenceVolumeSpec, _ := makePersistentVolume()
+		persistenceVolume := factory.Client.CoreV1().PersistentVolumes()
+		persistenceVolumeSpec, _ := makePersistentVolume(request)
 		_,err = persistenceVolume.Create(context.TODO(),persistenceVolumeSpec,metav1.CreateOptions{})
 
 		if err != nil {
@@ -127,9 +127,9 @@ func MakeDeployHandler(functionNamespace string, factory k8s.FunctionFactory) ht
 			http.Error(w, wrappedErr.Error(), http.StatusBadRequest)
 			return
 		}
-		*/
+
 		persistenceVolumeClaim := factory.Client.CoreV1().PersistentVolumeClaims(namespace)
-		persistenceVolumeClaimSpec, _ := makePersistentVolumeClaim()
+		persistenceVolumeClaimSpec, _ := makePersistentVolumeClaim(request)
 		_,err = persistenceVolumeClaim.Create(context.TODO(),persistenceVolumeClaimSpec,metav1.CreateOptions{})
 
 		if err != nil {
@@ -142,10 +142,13 @@ func MakeDeployHandler(functionNamespace string, factory k8s.FunctionFactory) ht
 		w.WriteHeader(http.StatusAccepted)
 	}
 }
-func makePersistentVolume() (*corev1.PersistentVolume, error) {
+func makePersistentVolume(request types.FunctionDeployment) (*corev1.PersistentVolume, error) {
 	PersistenceVolume := &corev1.PersistentVolume{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: "openfaas-local-storage-pv",
+			Name: request.Service + "-pv",
+			Labels: map[string]string{
+				"storage-pv": request.Service,
+			},
 		},
 		Spec: corev1.PersistentVolumeSpec{
 			Capacity: corev1.ResourceList{
@@ -162,16 +165,21 @@ func makePersistentVolume() (*corev1.PersistentVolume, error) {
 	return PersistenceVolume, nil
 
 }
-func makePersistentVolumeClaim() (*corev1.PersistentVolumeClaim, error) {
+func makePersistentVolumeClaim(request types.FunctionDeployment) (*corev1.PersistentVolumeClaim, error) {
 	PersistentVolumeClaim := &corev1.PersistentVolumeClaim{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: "openfaas-local-storage-pvc",
+			Name: request.Service +	"-pvc",
 		},
 		Spec: corev1.PersistentVolumeClaimSpec{
 			AccessModes: []corev1.PersistentVolumeAccessMode{corev1.ReadWriteMany},
 			Resources: corev1.ResourceRequirements{
 				Requests: corev1.ResourceList{
 					corev1.ResourceName(corev1.ResourceStorage): resource.MustParse("10Gi"),
+				},
+			},
+			Selector: &metav1.LabelSelector{
+				MatchLabels: map[string]string{
+					"storage-pv": request.Service,
 				},
 			},
 		},
@@ -275,7 +283,7 @@ func makeDeploymentSpec(request types.FunctionDeployment, existingSecrets map[st
 							Name: "openfaas-local-storage",
 							VolumeSource : corev1.VolumeSource{
 								PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
-									ClaimName:"openfaas-local-storage-pvc",
+									ClaimName: request.Service + "-pvc",
 								},
 							},
 						},
