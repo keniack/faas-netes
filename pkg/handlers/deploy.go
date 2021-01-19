@@ -127,7 +127,7 @@ func MakeDeployHandler(functionNamespace string, factory k8s.FunctionFactory) ht
 			http.Error(w, wrappedErr.Error(), http.StatusBadRequest)
 			return
 		}
-		*/
+
 		persistenceVolumeClaim := factory.Client.CoreV1().PersistentVolumeClaims(namespace)
 		persistenceVolumeClaimSpec, _ := makePersistentVolumeClaim(request)
 		_,err = persistenceVolumeClaim.Create(context.TODO(),persistenceVolumeClaimSpec,metav1.CreateOptions{})
@@ -138,33 +138,11 @@ func MakeDeployHandler(functionNamespace string, factory k8s.FunctionFactory) ht
 			http.Error(w, wrappedErr.Error(), http.StatusBadRequest)
 			return
 		}
-
+		*/
 		w.WriteHeader(http.StatusAccepted)
 	}
 }
-func makePersistentVolume(request types.FunctionDeployment) (*corev1.PersistentVolume, error) {
-	PersistenceVolume := &corev1.PersistentVolume{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: request.Service + "-pv",
-			Labels: map[string]string{
-				"storage-pv": request.Service,
-			},
-		},
-		Spec: corev1.PersistentVolumeSpec{
-			Capacity: corev1.ResourceList{
-				corev1.ResourceName(corev1.ResourceStorage): resource.MustParse("10Gi"),
-			},
-			AccessModes: []corev1.PersistentVolumeAccessMode{corev1.ReadWriteMany},
-			PersistentVolumeSource: corev1.PersistentVolumeSource{
-				HostPath: &corev1.HostPathVolumeSource{
-					Path: "/openfaas-local-storage",
-				},
-			},
-		},
-	}
-	return PersistenceVolume, nil
 
-}
 func makePersistentVolumeClaim(request types.FunctionDeployment) (*corev1.PersistentVolumeClaim, error) {
 	PersistentVolumeClaim := &corev1.PersistentVolumeClaim{
 		ObjectMeta: metav1.ObjectMeta{
@@ -283,7 +261,7 @@ func makeDeploymentSpec(request types.FunctionDeployment, existingSecrets map[st
 							Name: "openfaas-local-storage",
 							VolumeSource : corev1.VolumeSource{
 								PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
-									ClaimName: request.Service + "-pvc",
+									ClaimName: "openfaas-skippy-pvc",
 								},
 							},
 						},
