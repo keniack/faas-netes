@@ -116,53 +116,13 @@ func MakeDeployHandler(functionNamespace string, factory k8s.FunctionFactory) ht
 		}
 
 		log.Printf("Service created: %s.%s\n", request.Service, namespace)
-
-		/*persistenceVolume := factory.Client.CoreV1().PersistentVolumes()
-		persistenceVolumeSpec, _ := makePersistentVolume(request)
-		_,err = persistenceVolume.Create(context.TODO(),persistenceVolumeSpec,metav1.CreateOptions{})
-
-		if err != nil {
-			wrappedErr := fmt.Errorf("failed create PersistentVolume: %s", err.Error())
-			log.Println(wrappedErr)
-			http.Error(w, wrappedErr.Error(), http.StatusBadRequest)
-			return
-		}
-
-		persistenceVolumeClaim := factory.Client.CoreV1().PersistentVolumeClaims(namespace)
-		persistenceVolumeClaimSpec, _ := makePersistentVolumeClaim(request)
-		_,err = persistenceVolumeClaim.Create(context.TODO(),persistenceVolumeClaimSpec,metav1.CreateOptions{})
-
-		if err != nil {
-			wrappedErr := fmt.Errorf("failed create PersistentVolumeClaims: %s", err.Error())
-			log.Println(wrappedErr)
-			http.Error(w, wrappedErr.Error(), http.StatusBadRequest)
-			return
-		}
-		*/
 		w.WriteHeader(http.StatusAccepted)
 	}
 }
 
-func makePersistentVolumeClaim(request types.FunctionDeployment) (*corev1.PersistentVolumeClaim, error) {
-	PersistentVolumeClaim := &corev1.PersistentVolumeClaim{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: request.Service +	"-pvc",
-		},
-		Spec: corev1.PersistentVolumeClaimSpec{
-			AccessModes: []corev1.PersistentVolumeAccessMode{corev1.ReadWriteMany},
-			Resources: corev1.ResourceRequirements{
-				Requests: corev1.ResourceList{
-					corev1.ResourceName(corev1.ResourceStorage): resource.MustParse("10Gi"),
-				},
-			},
-			Selector: &metav1.LabelSelector{
-				MatchLabels: map[string]string{
-					"openfaas.storage": "local",
-				},
-			},
-		},
-	}
-	return PersistentVolumeClaim, nil
+
+func securityContextGroupId(id int64) *int64 {
+	return &id
 }
 
 func makeDeploymentSpec(request types.FunctionDeployment, existingSecrets map[string]*apiv1.Secret, factory k8s.FunctionFactory) (*appsv1.Deployment, error) {
@@ -265,6 +225,10 @@ func makeDeploymentSpec(request types.FunctionDeployment, existingSecrets map[st
 								},
 							},
 						},
+					},
+					SecurityContext: &corev1.PodSecurityContext{
+
+						FSGroup : securityContextGroupId(101),
 					},
 					Containers: []apiv1.Container{
 						{	VolumeMounts: []corev1.VolumeMount{
