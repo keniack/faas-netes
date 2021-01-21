@@ -121,10 +121,6 @@ func MakeDeployHandler(functionNamespace string, factory k8s.FunctionFactory) ht
 }
 
 
-func securityContextGroupId(id int64) *int64 {
-	return &id
-}
-
 func makeDeploymentSpec(request types.FunctionDeployment, existingSecrets map[string]*apiv1.Secret, factory k8s.FunctionFactory) (*appsv1.Deployment, error) {
 	envVars := buildEnvVars(&request)
 
@@ -225,10 +221,6 @@ func makeDeploymentSpec(request types.FunctionDeployment, existingSecrets map[st
 								},
 							},
 						},
-					},
-					SecurityContext: &corev1.PodSecurityContext{
-
-						FSGroup : securityContextGroupId(101),
 					},
 					Containers: []apiv1.Container{
 						{	VolumeMounts: []corev1.VolumeMount{
