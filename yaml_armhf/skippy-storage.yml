@@ -1,0 +1,28 @@
+kind: PersistentVolume
+apiVersion: v1
+metadata:
+  name: openfaas-skippy-pv
+  labels:
+    openfaas.storage: local
+spec:
+  capacity:
+    storage: 10Gi
+  accessModes:
+    - ReadWriteMany
+  hostPath:
+    path: "/openfaas-local-storage"
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: openfaas-skippy-pvc
+  namespace: openfaas-fn
+  labels:
+    openfaas.storage: local
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 10Gi
+
