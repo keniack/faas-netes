@@ -119,7 +119,7 @@ func MakeDeployHandler(functionNamespace string, factory k8s.FunctionFactory) ht
 
 		persistenceVolume := factory.Client.CoreV1().PersistentVolumes()
 		persistenceVolumeSpec, _ := makePersistentVolume()
-		_,err = persistenceVolume.Create(context.TODO(),persistenceVolumeSpec,metav1.CreateOptions{})
+		_, err = persistenceVolume.Create(context.TODO(), persistenceVolumeSpec, metav1.CreateOptions{})
 
 		if err != nil {
 			wrappedErr := fmt.Errorf("failed create PersistentVolume: %s", err.Error())
@@ -130,7 +130,7 @@ func MakeDeployHandler(functionNamespace string, factory k8s.FunctionFactory) ht
 
 		persistenceVolumeClaim := factory.Client.CoreV1().PersistentVolumeClaims(namespace)
 		persistenceVolumeClaimSpec, _ := makePersistentVolumeClaim()
-		_,err = persistenceVolumeClaim.Create(context.TODO(),persistenceVolumeClaimSpec,metav1.CreateOptions{})
+		_, err = persistenceVolumeClaim.Create(context.TODO(), persistenceVolumeClaimSpec, metav1.CreateOptions{})
 
 		if err != nil {
 			wrappedErr := fmt.Errorf("failed create PersistentVolumeClaims: %s", err.Error())
@@ -231,6 +231,7 @@ func makeDeploymentSpec(request types.FunctionDeployment, existingSecrets map[st
 	}
 
 	enableServiceLinks := false
+	allowPrivilegeEscalation := false
 
 	deploymentSpec := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
@@ -268,25 +269,25 @@ func makeDeploymentSpec(request types.FunctionDeployment, existingSecrets map[st
 					Annotations: annotations,
 				},
 				Spec: apiv1.PodSpec{
-					NodeSelector: nodeSelector,
+					NodeSelector:  nodeSelector,
 					SchedulerName: "skippy-scheduler",
 					Volumes: []corev1.Volume{
 						{
 							Name: "openfaas-local-storage",
-							VolumeSource : corev1.VolumeSource{
+							VolumeSource: corev1.VolumeSource{
 								PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
-									ClaimName:"openfaas-local-storage-pvc",
+									ClaimName: "openfaas-local-storage-pvc",
 								},
 							},
 						},
 					},
 					Containers: []apiv1.Container{
-						{	VolumeMounts: []corev1.VolumeMount{
-								{
-									Name: "openfaas-local-storage",
-									MountPath:"/openfaas-local-storage",
-								},
+						{VolumeMounts: []corev1.VolumeMount{
+							{
+								Name:      "openfaas-local-storage",
+								MountPath: "/openfaas-local-storage",
 							},
+						},
 							Name:  request.Service,
 							Image: request.Image,
 							Ports: []apiv1.ContainerPort{
@@ -302,7 +303,8 @@ func makeDeploymentSpec(request types.FunctionDeployment, existingSecrets map[st
 							LivenessProbe:   probes.Liveness,
 							ReadinessProbe:  probes.Readiness,
 							SecurityContext: &corev1.SecurityContext{
-								ReadOnlyRootFilesystem: &request.ReadOnlyRootFilesystem,
+								ReadOnlyRootFilesystem:   &request.ReadOnlyRootFilesystem,
+								AllowPrivilegeEscalation: &allowPrivilegeEscalation,
 							},
 						},
 					},
@@ -385,7 +387,7 @@ func buildEnvVars(request *types.FunctionDeployment) []corev1.EnvVar {
 	}
 
 	envVars = append(envVars, corev1.EnvVar{
-		Name:  "node",
+		Name: "node",
 		ValueFrom: &corev1.EnvVarSource{
 			FieldRef: &corev1.ObjectFieldSelector{
 				FieldPath: "spec.nodeName",
