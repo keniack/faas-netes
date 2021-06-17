@@ -1,5 +1,23 @@
 package types
 
+import "time"
+
+// Secret for underlying orchestrator
+type Secret struct {
+	// Name of the secret
+	Name string `json:"name"`
+
+	// Namespace if applicable for the secret
+	Namespace string `json:"namespace,omitempty"`
+
+	// Value is a string representing the string's value
+	Value string `json:"value,omitempty"`
+
+	// RawValue can be used to provide binary data when
+	// Value is not set
+	RawValue []byte `json:"rawValue,omitempty"`
+}
+
 // FunctionDeployment represents a request to create or update a Function.
 type FunctionDeployment struct {
 
@@ -42,13 +60,6 @@ type FunctionDeployment struct {
 	// ReadOnlyRootFilesystem removes write-access from the root filesystem
 	// mount-point.
 	ReadOnlyRootFilesystem bool `json:"readOnlyRootFilesystem,omitempty"`
-}
-
-// Secret for underlying orchestrator
-type Secret struct {
-	Name      string `json:"name"`
-	Namespace string `json:"namespace,omitempty"`
-	Value     string `json:"value,omitempty"`
 }
 
 // FunctionResources Memory and CPU
@@ -100,7 +111,9 @@ type FunctionStatus struct {
 	// mount-point.
 	ReadOnlyRootFilesystem bool `json:"readOnlyRootFilesystem,omitempty"`
 
-	// ** Status fields *8
+	// ================
+	// Fields for status
+	// ================
 
 	// InvocationCount count of invocations
 	InvocationCount float64 `json:"invocationCount,omitempty"`
@@ -111,4 +124,8 @@ type FunctionStatus struct {
 	// AvailableReplicas is the count of replicas ready to receive
 	// invocations as reported by the faas-provider
 	AvailableReplicas uint64 `json:"availableReplicas,omitempty"`
+
+	// CreatedAt is the time read back from the faas backend's
+	// data store for when the function or its container was created.
+	CreatedAt time.Time `json:"createdAt,omitempty"`
 }
